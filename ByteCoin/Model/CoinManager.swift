@@ -8,12 +8,54 @@
 
 import Foundation
 
+protocol CoinManagerDelegate {
+    func priceDidUpdate(price: String, currency: String)
+    func didFail(with error: Error)
+}
+
 struct CoinManager {
     
-    let baseURL = "https://rest.coinapi.io/v1/exchangerate/BTC"
-    let apiKey = "YOUR_API_KEY_HERE"
+    let baseURLString = "https://rest.coinapi.io/v1/exchangerate/BTC"
+    let apiKey = "750120CB-4B30-470E-A75D-1278F4657EAA"
+    var delegate: CoinManagerDelegate?
+    //https://rest.coinapi.io/v1/exchangerate/BTC/USD?apikey=750120CB-4B30-470E-A75D-1278F4657EAA
     
     let currencyArray = ["AUD", "BRL","CAD","CNY","EUR","GBP","HKD","IDR","ILS","INR","JPY","MXN","NOK","NZD","PLN","RON","RUB","SEK","SGD","USD","ZAR"]
 
+    
+    
+    
+    func fetchPrice(for currency: String){
+        if let baseUrl = URL(string: "\(baseURLString)/\(currency)?apikey=750120CB-4B30-470E-A75D-1278F4657EAA"){
+            print(baseUrl)
+            let session = URLSession(configuration: .default)
+            let task = session.dataTask(with: baseUrl) { data, response, error in
+                if error == nil {
+                    if let safeData = data{
+                        if let stringRate = decodeData(data: safeData){
+                            delegate?.priceDidUpdate(price: stringRate, currency: currency)
+                        }
+                    }
+                }else{
+                    delegate?.didFail(with: error!)
+                }
+            }
+            task.resume()
+        }
+    }
+    
+    
+    
+    
+    func decodeData(data: Data) -> String? {
+        let decoder = JSONDecoder()
+        do{
+            let decodedData = try decoder.decode(CoinModel.self, from: data)
+            return decodedData.roundedRate
+        }catch{
+            delegate?.didFail(with: error)
+            return nil
+        }
+    }
     
 }
